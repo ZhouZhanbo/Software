@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import scrolledtext
-import chat
 # 全局变量
 user = "user"
 root = []
@@ -52,18 +51,18 @@ def create_chatGUI():
     pic2 = photo2.subsample(5, 5)
     but2 = tk.Button(root, text="文件传输", command="", image=pic2, compound=tk.LEFT, height=18)
     but2.place(x=10, y=322)
-    # 语音聊天按钮
-    global pic3
-    photo3 = tk.PhotoImage(file="icon/voice.png")
-    pic3 = photo3.subsample(5, 5)
-    but3 = tk.Button(root, text="语音聊天", command="", image=pic3, compound=tk.LEFT, height=18)
-    but3.place(x=95, y=322)
-    # 视频聊天按钮
-    global pic4
-    photo4 = tk.PhotoImage(file="icon/video.png")
-    pic4 = photo4.subsample(5, 5)
-    but4 = tk.Button(root, text="视频聊天", command="", image=pic4, compound=tk.LEFT, height=18)
-    but4.place(x=180, y=322)
+    # # 语音聊天按钮
+    # global pic3
+    # photo3 = tk.PhotoImage(file="icon/voice.png")
+    # pic3 = photo3.subsample(5, 5)
+    # but3 = tk.Button(root, text="语音聊天", command="", image=pic3, compound=tk.LEFT, height=18)
+    # but3.place(x=95, y=322)
+    # # 视频聊天按钮
+    # global pic4
+    # photo4 = tk.PhotoImage(file="icon/video.png")
+    # pic4 = photo4.subsample(5, 5)
+    # but4 = tk.Button(root, text="视频聊天", command="", image=pic4, compound=tk.LEFT, height=18)
+    # but4.place(x=180, y=322)
     # 用户属性按钮
     global pic5
     photo5 = tk.PhotoImage(file="icon/user.png")

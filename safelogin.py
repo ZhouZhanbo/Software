@@ -5,6 +5,8 @@ import json
 
 user = ""
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, True)
+s.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 60 * 1000, 30 * 1000))
 s.connect(("127.0.0.1", 11451))  # 网络链接
 
 
