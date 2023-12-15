@@ -11,9 +11,18 @@ from safelogin import s
 import cv2
 import pickle
 import struct
+import pyaudio
+
+p = pyaudio.PyAudio()
+CHUNK = 1024
+FORMAT = pyaudio.paInt16    # 格式
+CHANNELS = 2    # 输入/输出通道数
+RATE = 44100    # 音频数据的采样频率
+RECORD_SECONDS = 0.5    # 记录秒
 
 video_data = b""
 vsendflag = 0
+asendflag = 0
 video_data_lock = threading.Lock()  # 添加一个锁对象用于同步访问video_data
 
 class Video:
@@ -50,16 +59,48 @@ class Video:
         while True:
             global video_data
             try:
-                frame = pickle.loads(video_data)
-
-                # 在窗口中显示视频帧
+                frame_data = zlib.decompress(video_data)
+                frame = pickle.loads(frame_data)
                 cv2.imshow(name, frame)
+                # 在窗口中显示视频帧
                 if cv2.waitKey(1) & 0xFF == 27:  # 按ESC键退出
                     cv2.destroyWindow(name)
                     return
             except:
                 print("video play error")
-                return
+                pass
+
+
+class Audio:
+    def __init__(self):
+        self.stream = None
+
+    def audio_send(self):
+        self.stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        while self.stream.is_active():
+            global asendflag
+            asendflag = 1
+            frames = []
+            data = self.stream.read(CHUNK)
+            # senddata = pickle.dumps(data)
+            try:
+                s.sendall(struct.pack("L", len(data)) + data)
+            except:
+                print("audio sending error")
+                break
+
+    def audio_play(self):
+        while True:
+            try:
+                global video_data
+                with video_data_lock:
+                    frame_data = video_data
+                frames = pickle.loads(frame_data)
+                for frame in frames:
+                    self.stream.write(frame, CHUNK)
+            except:
+                print("not audio")
+                pass
 
 
 # 接收消息
@@ -77,19 +118,26 @@ def recv():
                 if type(data) != dict:  # 解包消息是视频数据
                     print("video detected")
                     payload_size = struct.calcsize("L")
-                    if len(raw_data) < payload_size:
-                        pass
+                    while len(raw_data) < payload_size:
+                        raw_data += s.recv(81920)
                     else:
                         packed_size = raw_data[:payload_size]
                         data = raw_data[payload_size:]
                         msg_size = struct.unpack("L",packed_size)[0]
+                        start_time = time.time()
                         while len(data) < msg_size:
-                            data += s.recv(81920)
+                            timeout = 1.0
+                            current_time = time.time()
+                            elapsed_time = current_time - start_time  # 计算已经过去的时间
+                            if elapsed_time >= timeout:
+                                break
+                            else:
+                                data += s.recv(81920)
                         zframe_data = data[:msg_size]
                         data = data[msg_size:]
-                        frame_data = zlib.decompress(zframe_data)
                         global video_data
-                        video_data = frame_data
+                        with video_data_lock:
+                            video_data = zframe_data
                 elif data["type"] == "user_list":  # 接收的消息是用户列表，则重新加载用户
                     chat.show_users(data["user_list"])
                 elif data["type"] == "message":  # 接收的消息是文本消息
@@ -114,6 +162,17 @@ def recv():
                         my_video.start()
                     # my_video = threading.Thread(target=video.run_play, args=(name,))  # 创建视频播放线程
                     # my_video.start()
+                elif data["type"] == "audio_return":  # 接收到服务器返回消息，建立视频连接
+                    my_audio = threading.Thread(target=audio.audio_send)  # 创建音频发送线程
+                    my_audio.start()
+                    pass
+                elif data["type"] == "audio":  # 接收到视频连接请求，启动视频播放
+                    if asendflag == 0:
+                        my_audio = threading.Thread(target=audio.audio_send)  # 创建音频发送线程
+                        my_audio.start()
+                        pass
+                    # my_audio = threading.Thread(target=audio.audio_play)  # 创建音频播放线程
+                    # my_audio.start()
         # except:
         #     print("已经断开链接")
         #     break
@@ -149,6 +208,7 @@ def video_chat():
 chat.user = safelogin.user
 if chat.user != "":
     video = Video(3)
+    audio = Audio()
     chat.create_chat()  # 创建聊天界面
     chat.chatGUI.a.bind("<Return>", send)
     # 回车绑定发送功能

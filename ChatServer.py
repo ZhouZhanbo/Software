@@ -96,10 +96,11 @@ class Server:
                     elif data["type"] == "audio":
                         for i in users:
                             if i[1] == data["receiver"]:
-                                mesg_que.put(json.dumps({"type": "audio", "IP": i[2][0], "receiver": data["sender"]}))
+                                mesg_que.put(json.dumps({"type": "audio_return",
+                                                         "receiver": data["sender"]}))
                         for i in users:
                             if i[1] == data["sender"]:
-                                data = {"type": "audio", "IP": i[2][0], "receiver": data["receiver"]}
+                                data = {"type": "audio", "receiver": data["receiver"], "sender": data["sender"]}
                         mesg_que.put(json.dumps(data))  # 放入消息队列
                     elif data["type"] == "video":
                         for i in users:
@@ -158,6 +159,7 @@ class Server:
 
             if not audio_que.empty():   # 音视频流 广播转发 客户端决定是否接收消息
                 address, video_data = audio_que.get()
+                print("audio working")
                 for j in range(len(users)):
                     if users[j][2] == address:
                         pass
