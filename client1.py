@@ -1,5 +1,5 @@
 import zlib
-
+import time
 import chat
 import chatGUI
 import safelogin
@@ -14,7 +14,7 @@ import struct
 
 video_data = b""
 vsendflag = 0
-
+video_data_lock = threading.Lock()  # 添加一个锁对象用于同步访问video_data
 
 class Video:
     def __init__(self, level):
@@ -41,6 +41,7 @@ class Video:
                 break
             # 显示本地视频
             cv2.imshow("Local Video", frame)
+            time.sleep(0.033)
             if cv2.waitKey(1) & 0xFF == 27:  # 按ESC键退出
                 return
 

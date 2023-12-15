@@ -77,49 +77,49 @@ class Server:
         online_list.append(recv_message["user"])
         print('新的连接:', client_address, ':', recv_message["user"], end='')
         mesg_que.put(json.dumps({"type": "user_list", "user_list": online_list, "receiver": "all_user"}))
-        # try:  # 进入接收循环
-        while True:
-            global data
-            raw_data = client_socket.recv(81920)
-            try:
-                data = raw_data.decode('utf-8')
-                data = json.loads(data)  # 调试时使用，查看接收消息是否正常
-                print("receive")
-                print(data)
-            except:
-                data = raw_data
-                pass
-            lock.acquire()  # 申请开锁
-            try:
-                if type(data) != dict:
-                    audio_que.put(raw_data)  # 视频消息转发队列
-                elif data["type"] == "audio":
-                    for i in users:
-                        if i[1] == data["receiver"]:
-                            mesg_que.put(json.dumps({"type": "audio", "IP": i[2][0], "receiver": data["sender"]}))
-                    for i in users:
-                        if i[1] == data["sender"]:
-                            data = {"type": "audio", "IP": i[2][0], "receiver": data["receiver"]}
-                    mesg_que.put(json.dumps(data))  # 放入消息队列
-                elif data["type"] == "video":
-                    for i in users:
-                        if i[1] == data["receiver"]:
-                            mesg_que.put(json.dumps({"type": "video_return",
-                                                     "receiver": data["sender"]}))
-                    for i in users:
-                        if i[1] == data["sender"]:
-                            data = {"type": "video", "receiver": data["receiver"], "sender": data["sender"]}
-                    mesg_que.put(json.dumps(data))  # 放入消息队列
-                else:
-                    mesg_que.put(json.dumps(data))  # 放入消息队列
-            finally:
-                lock.release()  # 释放锁
-        # except:
-        #     print(recv_message["user"] + '断开连接')
-        #     # 断开连接后删除用户
-        #     self.delete_user(client_socket, recv_message["user"])
-        #     mesg_que.put(json.dumps({"type": "user_list", "user_list": online_list, "receiver": "all_user"}))
-        #     client_socket.close()
+        try:  # 进入接收循环
+            while True:
+                global data
+                raw_data = client_socket.recv(81920)
+                try:
+                    data = raw_data.decode('utf-8')
+                    data = json.loads(data)  # 调试时使用，查看接收消息是否正常
+                    print("receive")
+                    print(data)
+                except:
+                    data = raw_data
+                    pass
+                lock.acquire()  # 申请开锁
+                try:
+                    if type(data) != dict:
+                        audio_que.put((client_address, raw_data))  # 视频消息转发队列
+                    elif data["type"] == "audio":
+                        for i in users:
+                            if i[1] == data["receiver"]:
+                                mesg_que.put(json.dumps({"type": "audio", "IP": i[2][0], "receiver": data["sender"]}))
+                        for i in users:
+                            if i[1] == data["sender"]:
+                                data = {"type": "audio", "IP": i[2][0], "receiver": data["receiver"]}
+                        mesg_que.put(json.dumps(data))  # 放入消息队列
+                    elif data["type"] == "video":
+                        for i in users:
+                            if i[1] == data["receiver"]:
+                                mesg_que.put(json.dumps({"type": "video_return",
+                                                         "receiver": data["sender"]}))
+                        for i in users:
+                            if i[1] == data["sender"]:
+                                data = {"type": "video", "receiver": data["receiver"], "sender": data["sender"]}
+                        mesg_que.put(json.dumps(data))  # 放入消息队列
+                    else:
+                        mesg_que.put(json.dumps(data))  # 放入消息队列
+                finally:
+                    lock.release()  # 释放锁
+        except:
+            print(recv_message["user"] + '断开连接')
+            # 断开连接后删除用户
+            self.delete_user(client_socket, recv_message["user"])
+            mesg_que.put(json.dumps({"type": "user_list", "user_list": online_list, "receiver": "all_user"}))
+            client_socket.close()
 
     def delete_user(self, client_socket, user_name):  # 删除用户
 
@@ -157,13 +157,12 @@ class Server:
                             break
 
             if not audio_que.empty():   # 音视频流 广播转发 客户端决定是否接收消息
-                video_data = audio_que.get()
-                print("sending audio...")
+                address, video_data = audio_que.get()
                 for j in range(len(users)):
-                    try:
+                    if users[j][2] == address:
+                        pass
+                    else:
                         users[j][0].sendall(video_data)
-                    except:
-                        self.delete_user(users[0], users[1])
 
     def run(self):  # 启动多线程，每个线程对应一个客户端的接收
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

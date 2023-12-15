@@ -1,5 +1,5 @@
 import zlib
-
+import time
 import chat
 import chatGUI
 import safelogin
@@ -11,6 +11,8 @@ from safelogin import s
 import cv2
 import pickle
 import struct
+
+video_data_lock = threading.Lock()  # 添加一个锁对象用于同步访问video_data
 
 video_data = b""
 vsendflag = 0
@@ -41,18 +43,20 @@ class Video:
                 break
             # 显示本地视频
             cv2.imshow("Local Video", frame)
+            time.sleep(0.033)
             if cv2.waitKey(1) & 0xFF == 27:  # 按ESC键退出
                 return
 
     def run_play(self, name):
         while True:
             global video_data
+            with video_data_lock:
+                frame_data = video_data
             try:
-                frame = pickle.loads(video_data)
+                frame = pickle.loads(frame_data)
 
                 # 在窗口中显示视频帧
                 cv2.imshow(name, frame)
-                print("playing")
                 if cv2.waitKey(1) & 0xFF == 27:  # 按ESC键退出
                     return
             except:
@@ -81,13 +85,24 @@ def recv():
                         packed_size = raw_data[:payload_size]
                         data = raw_data[payload_size:]
                         msg_size = struct.unpack("L",packed_size)[0]
+                        start_time = time.time()
                         while len(data) < msg_size:
-                            data += s.recv(81920)
+                            timeout = 1.0
+                            current_time = time.time()
+                            elapsed_time = current_time - start_time  # 计算已经过去的时间
+                            if elapsed_time >= timeout:
+                                break
+                            else:
+                                data += s.recv(81920)
                         zframe_data = data[:msg_size]
                         data = data[msg_size:]
-                        frame_data = zlib.decompress(zframe_data)
+                        try:
+                            frame_data = zlib.decompress(zframe_data)
+                        except:
+                            print("data lost")
                         global video_data
-                        video_data = frame_data
+                        with video_data_lock:
+                            video_data = frame_data
                 elif data["type"] == "user_list":  # 接收的消息是用户列表，则重新加载用户
                     chat.show_users(data["user_list"])
                 elif data["type"] == "message":  # 接收的消息是文本消息
@@ -167,6 +182,7 @@ if chat.user != "":
     but4 = tk.Button(chat.chatGUI.root, text="视频聊天", command=video_chat, image=pic4, compound=tk.LEFT, height=18)
     but4.place(x=180, y=322)
     r = threading.Thread(target=recv)  # 启动接受消息线程
+    r.daemon = True
     r.start()
     chat.tkinter.mainloop()
 # 关闭链接，把缓存的消息放进文件a
