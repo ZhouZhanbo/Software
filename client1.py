@@ -43,6 +43,7 @@ class Video:
             cv2.imshow("Local Video", frame)
             time.sleep(0.033)
             if cv2.waitKey(1) & 0xFF == 27:  # 按ESC键退出
+                cv2.destroyWindow("Local Video")
                 return
 
     def run_play(self, name):
@@ -54,6 +55,7 @@ class Video:
                 # 在窗口中显示视频帧
                 cv2.imshow(name, frame)
                 if cv2.waitKey(1) & 0xFF == 27:  # 按ESC键退出
+                    cv2.destroyWindow(name)
                     return
             except:
                 print("video play error")
