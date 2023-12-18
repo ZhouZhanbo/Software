@@ -4,13 +4,13 @@ import socket
 import json
 
 user = ""
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("127.0.0.1", 11451))  # 网络链接
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(("127.0.0.1", 11451))  # 网络链接
 
 
 def create_zhuceroot():
     # 注册窗口
-    global s
+    global client
     zhuceRoot = tk.Tk()
     zhuceRoot.title("注册")
     zhuceRoot["height"] = 300
@@ -54,9 +54,8 @@ def create_zhuceroot():
             tkinter.messagebox.showerror('提示', message='用户名或密码为空')
             return
         data = {"type": "register", "user": user1, "password": Password, "again_Password": againPassword}  # 发给服务器
-        s.send(json.dumps(data).encode('utf-8'))
-        recv_data = s.recv(1024).decode('utf-8')  # 接收返回信息
-        print(recv_data)
+        client.send(json.dumps(data).encode('utf-8'))
+        recv_data = client.recv(1024).decode('utf-8')  # 接收返回信息
         recv_data = json.loads(recv_data)
         if recv_data["type"] == "register":
             if recv_data["message"] == "OK":
@@ -117,9 +116,9 @@ def create_loginroot():
             tkinter.messagebox.showerror('温馨提示', message='用户名或密码为空！')
             return
         data = {"type": "login", "user": user1, "password": Password}  # 发给服务器
-        s.send(json.dumps(data).encode('utf-8'))
+        client.send(json.dumps(data).encode('utf-8'))
 
-        recv_data = s.recv(1024).decode('utf-8')  # 接收返回信息
+        recv_data = client.recv(1024).decode('utf-8')  # 接收返回信息
         recv_data = json.loads(recv_data)
         print(recv_data)
         if recv_data["type"] == "login":  # 登录消息
@@ -201,8 +200,8 @@ def create_changepwroot():
         againnewPassword = entryagainnewpassword.get()
         data = {"type": "change_password", "user": user, "Old_password": Oldpassword,
                 "New_password": Newpassword, "again_new_Password":againnewPassword}
-        s.send(json.dumps(data).encode('utf-8'))
-        recv_data = s.recv(1024).decode('utf-8')  # 接收返回信息
+        client.send(json.dumps(data).encode('utf-8'))
+        recv_data = client.recv(1024).decode('utf-8')  # 接收返回信息
         recv_data = json.loads(recv_data)
         if recv_data["type"] == "change_password":  # 登录消息
             if recv_data["message"] == "OK":

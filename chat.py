@@ -2,6 +2,9 @@ import tkinter
 import interact
 import chatGUI
 
+user = "user"
+chat = "all_user"
+t = interact.Interact(user, "all_user")
 
 # 发送消息，发送给服务器消息
 def send(time):
@@ -83,6 +86,4 @@ def show_users(users):
             chatGUI.listbox1.insert("end", use)
     chatGUI.listbox1.select_set(0)
 
-user = "user"
-chat = "all_user"
-t = interact.Interact(user, "all_user")
+
